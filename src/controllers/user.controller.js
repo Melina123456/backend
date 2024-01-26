@@ -36,7 +36,6 @@ const registerUser = asyncHandler(async (req, res) => {
   //  return res
 
   const { username, fullname, email, password } = req.body;
-  console.log(email);
   if (
     [username, fullname, email, password].some((field) => field?.trim() === "")
   ) {
@@ -106,7 +105,6 @@ const loginUser = asyncHandler(async (req, res) => {
   //send cookie
 
   const { email, username, password } = req.body;
-  console.log(email);
 
   if (!email && !username) {
     throw new ApiError(400, "email or username is required.");
@@ -160,8 +158,10 @@ const logoutUser = asyncHandler(async (req, res) => {
   await User.findByIdAndUpdate(
     req.user._id,
     {
-      $set: {
-        refreshToken: undefined,
+      //operation of mongodb
+      //the below removes the field from token.
+      $unset: {
+        refreshToken: 1,
       },
     },
     {
@@ -184,12 +184,14 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   const incomingRefreshToken =
     req.cookies.refreshToken || req.body.refreshToken;
 
+    console.log(incomingRefreshToken);
+
   if (!incomingRefreshToken) {
     throw new ApiError(401, "unauthorized request");
   }
 
   try {
-    const decodedToken = await jwt.verify(
+    const decodedToken = jwt.verify(
       incomingRefreshToken,
       process.env.REFRESH_TOKEN_SECRET
     );
@@ -212,7 +214,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     const { accessToken, newRefreshToken } =
       await generateAccessAndRefreshToken(user._id);
 
-    res
+    return res
       .status(200)
       .cookie("accessToken", accessToken, options)
       .cookie("refreshToken", newRefreshToken, options)
